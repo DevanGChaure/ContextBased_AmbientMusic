@@ -119,6 +119,10 @@ def process_chunk(book_id, chunk, ollama_model, director_model, state):
         "silence_ms": decision["silence_ms"],
         "track_id": decision["track_id"],
         "action_reasoning": decision["action_reasoning"],
+
+        # raw text data (matches public/data timeline format)
+        "paragraphs": [p for p in chunk.text.split("\n\n") if p.strip()],
+        "word_count": chunk.word_count,
     }
 
     return timeline_entry, new_state

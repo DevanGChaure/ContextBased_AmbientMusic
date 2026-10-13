@@ -6,9 +6,10 @@ Requires GEMINI_API_KEY to be set in the environment (see config.py).
 """
 
 import json
-import requests
 
 import config
+import http_retry
+import requests
 
 
 class GeminiError(RuntimeError):
@@ -23,6 +24,7 @@ def generate_json(prompt: str, system: str = "", model: str = None,
         )
 
     model = model or config.DEFAULT_GEMINI_MODEL
+    print("Gemini model:", model)
     url = f"{config.GEMINI_BASE_URL}/{model}:generateContent?key={config.GEMINI_API_KEY}"
 
     full_prompt = f"{system}\n\n{prompt}" if system else prompt
@@ -36,19 +38,38 @@ def generate_json(prompt: str, system: str = "", model: str = None,
     }
 
     try:
-        resp = requests.post(url, json=payload, timeout=timeout)
-        resp.raise_for_status()
+        resp = http_retry.post_with_retry(
+            url, json_payload=payload, timeout=timeout
+        )
+    except http_retry.RateLimitExceeded as e:
+        raise GeminiError(str(e)) from e
     except requests.RequestException as e:
         raise GeminiError(f"Gemini API call failed: {e}") from e
 
     data = resp.json()
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        parts = data["candidates"][0]["content"]["parts"]
+        text = None
+        for part in reversed(parts):
+            if "text" in part and not part.get("thought", False):
+                text = part["text"]
+                break
+        if text is None:
+            text = parts[0]["text"]
     except (KeyError, IndexError) as e:
         raise GeminiError(f"Unexpected Gemini response shape: {data}") from e
 
+    clean_text = text.strip()
+    if clean_text.startswith("```"):
+        lines = clean_text.splitlines()
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        clean_text = "\n".join(lines).strip()
+
     try:
-        return json.loads(text)
+        return json.loads(clean_text)
     except json.JSONDecodeError as e:
         raise GeminiError(
             f"Gemini returned non-JSON despite responseMimeType=json.\n"

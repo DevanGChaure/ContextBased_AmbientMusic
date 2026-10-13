@@ -8,6 +8,7 @@ import json
 
 import config
 import http_retry
+import requests
 
 
 class GroqError(RuntimeError):
@@ -22,6 +23,7 @@ def generate_json(prompt: str, system: str = "", model: str = None,
         )
 
     model = model or config.DEFAULT_GROQ_MODEL
+    print("Groq model:", model)
     headers = {
         "Authorization": f"Bearer {config.GROQ_API_KEY}",
         "Content-Type": "application/json",

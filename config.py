@@ -21,12 +21,12 @@ OLLAMA_TIMEOUT_SECONDS = 1000   # 5 min — local inference on CPU can be slow
 
 # --- Gemini (cloud, director option A) ---
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 # --- Groq (cloud, director option B) ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # --- Which provider the Director uses. "gemini" or "groq". ---
