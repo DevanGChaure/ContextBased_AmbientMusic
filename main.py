@@ -11,6 +11,7 @@ have a completed timeline entry.
 import argparse
 import json
 import os
+import shutil
 import sys
 import time
 
@@ -49,6 +50,45 @@ def _load_timeline(book_id):
 def _save_timeline(book_id, timeline):
     path = os.path.join(config.book_cache_dir(book_id), "timeline.json")
     _save_json(path, timeline)
+
+
+def _public_data_dir():
+    """Absolute path to public/data/ (sibling of this script)."""
+    return os.path.join(config.BASE_DIR, "public", "data")
+
+
+def _publish_to_frontend(book_id, book_title=None):
+    """
+    Copy the finished cache/<book_id>/timeline.json into
+    public/data/<book_id>/timeline.json and register the book in
+    public/data/books.json so the React app discovers it automatically.
+    """
+    src = os.path.join(config.book_cache_dir(book_id), "timeline.json")
+    if not os.path.exists(src):
+        return
+
+    # Copy timeline into public/data/<book_id>/
+    dest_dir = os.path.join(_public_data_dir(), book_id)
+    os.makedirs(dest_dir, exist_ok=True)
+    shutil.copy2(src, os.path.join(dest_dir, "timeline.json"))
+
+    # Upsert entry in public/data/books.json
+    manifest_path = os.path.join(_public_data_dir(), "books.json")
+    manifest = _load_json(manifest_path) or []
+
+    # Determine a human-readable label
+    label = book_title or book_id
+
+    # Update existing entry or append a new one
+    existing = next((b for b in manifest if b["id"] == book_id), None)
+    if existing:
+        existing["label"] = label
+    else:
+        manifest.append({"id": book_id, "label": label})
+
+    _save_json(manifest_path, manifest)
+    print(f"Published  -> public/data/{book_id}/timeline.json")
+    print(f"Manifest   -> public/data/books.json ({len(manifest)} book(s))")
 
 
 def _append_director_log(book_id, entry):
@@ -191,6 +231,10 @@ def main():
 
     print(f"\nDone. Timeline written to "
           f"{os.path.join(config.book_cache_dir(args.book_id), 'timeline.json')}")
+
+    # Derive a readable title from the source filename (e.g. "pride_and_prejudice" -> "Pride And Prejudice")
+    default_title = os.path.splitext(os.path.basename(args.book))[0].replace("_", " ").title()
+    _publish_to_frontend(args.book_id, book_title=default_title)
 
 
 if __name__ == "__main__":

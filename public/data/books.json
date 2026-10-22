@@ -1,0 +1,5 @@
+[
+  { "id": "HP",        "label": "Harry Potter"        },
+  { "id": "HP_prefix", "label": "Harry Potter Prefix"  },
+  { "id": "PnP",       "label": "Pride & Prejudice"   }
+]
